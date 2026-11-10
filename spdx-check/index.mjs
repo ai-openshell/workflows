@@ -59,8 +59,7 @@ function main() {
   const exclude = patterns(process.env.INPUT_EXCLUDE);
   const files = listFiles({ include, exclude, cwd });
   const failures = findFailures(files, cwd);
-  const result =
-    `Checked ${files.length} files, ${failures.length} missing ${LICENSE}`;
+  const result = `Checked ${files.length} files, ${failures.length} missing ${LICENSE}`;
   failures.forEach((src) => console.log(annotation(src)));
   console.log(result);
   const summary = process.env.GITHUB_STEP_SUMMARY;
