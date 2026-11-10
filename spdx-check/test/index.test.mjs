@@ -131,6 +131,22 @@ test('a filename cannot inject a workflow command', { skip: process.platform ===
   assert.ok(!lines.some((l) => l.startsWith('::add-mask')), lines.join('\n'));
 });
 
+test('a long first line does not hide a header on line 2', () => {
+  const cwd = makeRepo({ 'a.py': `#${'x'.repeat(10000)}\n${HEADER}` });
+  const { status, errors, stderr } = run(cwd, { INPUT_INCLUDE: '*.py' });
+  assert.deepEqual(errors, []);
+  assert.equal(status, 0, stderr);
+});
+
+// Line 1 is 8155 bytes, so "Apache-2.0" on line 2 ends exactly at byte 8192.
+test('a license expression cut at 8 KiB is not accepted', () => {
+  const line1 = `#${'x'.repeat(8153)}\n`;
+  const cwd = makeRepo({ 'a.py': `${line1}# SPDX-License-Identifier: Apache-2.0 OR MIT\n` });
+  const { status, errors } = run(cwd, { INPUT_INCLUDE: '*.py' });
+  assert.deepEqual(errors, [annotation('a.py')]);
+  assert.equal(status, 1);
+});
+
 test('step summary is appended with failing paths', () => {
   const cwd = makeRepo({ 'a.py': 'x\n', 'm/b.py': 'x\n' });
   const summary = join(tempDir(), 'summary.md');
