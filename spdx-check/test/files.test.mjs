@@ -68,6 +68,12 @@ test('excludes remove matching files', () => {
   assert.deepEqual(files, ['a.py']);
 });
 
+test('exclude patterns keep their own pathspec magic', () => {
+  const cwd = makeRepo(['src/z.go', 'vendor/y.go', 'vendor/a/x.go']);
+  const files = listFiles({ include: ['*.go'], exclude: [':(glob)vendor/**'], cwd });
+  assert.deepEqual(files, ['src/z.go']);
+});
+
 test('untracked files are ignored', () => {
   const cwd = makeRepo(['a.py']);
   writeFiles(cwd, ['b.py']);
