@@ -20,6 +20,16 @@ function readHead(path) {
   return head.subarray(0, bytesRead);
 }
 
+// GitHub's escaping rules for workflow command property values.
+function escapeProperty(value) {
+  return value
+    .replaceAll("%", "%25")
+    .replaceAll("\r", "%0D")
+    .replaceAll("\n", "%0A")
+    .replaceAll(":", "%3A")
+    .replaceAll(",", "%2C");
+}
+
 function findFailures(files, cwd) {
   const failures = [];
   for (const file of files) {
@@ -48,7 +58,7 @@ function main() {
   const files = listFiles({ include, exclude, cwd });
   const failures = findFailures(files, cwd);
   for (const src of failures) {
-    console.log(`::error file=${src},line=1::Missing ${LICENSE}`);
+    console.log(`::error file=${escapeProperty(src)},line=1::Missing ${LICENSE}`);
   }
   console.log(
     `Checked ${files.length} files, ${failures.length} missing ${LICENSE}`,
