@@ -6,6 +6,13 @@ import { headerSource, listFiles } from "./files.mjs";
 import { hasHeaderLines, hasSpdxHeader } from "./header.mjs";
 
 const LICENSE = "SPDX-License-Identifier: Apache-2.0";
+const ESCAPES = {
+  "%": "%25",
+  "\r": "%0D",
+  "\n": "%0A",
+  ":": "%3A",
+  ",": "%2C",
+};
 const head = Buffer.alloc(8192);
 
 function patterns(value = "") {
@@ -27,34 +34,22 @@ function readHead(path) {
   return buf.subarray(0, size);
 }
 
-// GitHub's escaping rules for workflow command property values.
-function escapeProperty(value) {
-  return value
-    .replaceAll("%", "%25")
-    .replaceAll("\r", "%0D")
-    .replaceAll("\n", "%0A")
-    .replaceAll(":", "%3A")
-    .replaceAll(",", "%2C");
-}
-
 function findFailures(files, cwd) {
-  const failures = [];
-  for (const file of files) {
-    const src = headerSource(file, cwd);
-    if (!hasSpdxHeader(readHead(join(cwd, src)))) failures.push(src);
-  }
-  return failures.sort();
+  return files
+    .map((file) => headerSource(file, cwd))
+    .filter((src) => !hasSpdxHeader(readHead(join(cwd, src))))
+    .sort();
 }
 
-function writeSummary(path, total, failures) {
-  const lines = [
-    "### SPDX check",
-    "",
-    `Checked ${total} files, ${failures.length} missing \`${LICENSE}\`.`,
-    "",
-    ...failures.map((failure) => `- \`${failure}\``),
-  ];
-  appendFileSync(path, lines.join("\n") + "\n");
+// Escaped so a file name can't break out of the workflow command.
+function annotation(src) {
+  const file = src.replace(/[%\r\n:,]/g, (char) => ESCAPES[char]);
+  return `::error file=${file},line=1::Missing ${LICENSE}`;
+}
+
+function writeSummary(path, result, failures) {
+  const list = failures.map((src) => `- \`${src}\`\n`).join("");
+  appendFileSync(path, `### SPDX check\n\n${result}\n\n${list}`);
 }
 
 function main() {
@@ -64,14 +59,12 @@ function main() {
   const exclude = patterns(process.env.INPUT_EXCLUDE);
   const files = listFiles({ include, exclude, cwd });
   const failures = findFailures(files, cwd);
-  for (const src of failures) {
-    console.log(`::error file=${escapeProperty(src)},line=1::Missing ${LICENSE}`);
-  }
-  console.log(
-    `Checked ${files.length} files, ${failures.length} missing ${LICENSE}`,
-  );
-  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
-  if (summaryPath) writeSummary(summaryPath, files.length, failures);
+  const result =
+    `Checked ${files.length} files, ${failures.length} missing ${LICENSE}`;
+  failures.forEach((src) => console.log(annotation(src)));
+  console.log(result);
+  const summary = process.env.GITHUB_STEP_SUMMARY;
+  if (summary) writeSummary(summary, result, failures);
   if (failures.length > 0) process.exitCode = 1;
 }
 
