@@ -3,7 +3,7 @@
 import { appendFileSync, closeSync, openSync, readSync } from "node:fs";
 import { join } from "node:path";
 import { headerSource, listFiles } from "./files.mjs";
-import { hasSpdxHeader } from "./header.mjs";
+import { hasHeaderLines, hasSpdxHeader } from "./header.mjs";
 
 const LICENSE = "SPDX-License-Identifier: Apache-2.0";
 const head = Buffer.alloc(8192);
@@ -12,12 +12,19 @@ function patterns(value = "") {
   return value.split(/\s+/).filter(Boolean);
 }
 
+// Grows past 8 KiB only until the header lines are complete, so a long line
+// can't hide the header or cut a license expression short.
 function readHead(path) {
   // TODO: handle unreadable entries (submodules, dangling symlinks, deleted files).
   const fd = openSync(path, "r");
-  const bytesRead = readSync(fd, head, 0, head.length, 0);
+  let buf = head;
+  let size = readSync(fd, buf, 0, buf.length, 0);
+  while (size === buf.length && !hasHeaderLines(buf)) {
+    buf = Buffer.concat([buf], buf.length * 2);
+    size += readSync(fd, buf, size, buf.length - size, size);
+  }
   closeSync(fd);
-  return head.subarray(0, bytesRead);
+  return buf.subarray(0, size);
 }
 
 // GitHub's escaping rules for workflow command property values.

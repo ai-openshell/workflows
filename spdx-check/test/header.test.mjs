@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hasSpdxHeader } from '../header.mjs';
+import { hasHeaderLines, hasSpdxHeader } from '../header.mjs';
 
 const ID = 'SPDX-License-Identifier: Apache-2.0';
 
@@ -99,4 +99,10 @@ test('NUL bytes around header still pass', () => {
     Buffer.from([0x00, 0xff]),
   ]);
   assert.equal(hasSpdxHeader(buf), true);
+});
+
+test('header lines are complete only after the tenth newline', () => {
+  assert.equal(hasHeaderLines(Buffer.from(filler(9))), false);
+  assert.equal(hasHeaderLines(Buffer.from(`${filler(9)}x`)), false);
+  assert.equal(hasHeaderLines(Buffer.from(filler(10))), true);
 });
