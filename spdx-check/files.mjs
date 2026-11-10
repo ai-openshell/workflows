@@ -4,8 +4,16 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
+// Git reads a second ":(...)" prefix as literal text, so long-form magic
+// must be merged into the exclude prefix.
+function excludeSpec(pattern) {
+  return pattern.startsWith(":(")
+    ? `:(exclude,${pattern.slice(2)}`
+    : `:(exclude)${pattern}`;
+}
+
 export function listFiles({ include, exclude = [], cwd }) {
-  const excludes = exclude.map((pattern) => `:(exclude)${pattern}`);
+  const excludes = exclude.map(excludeSpec);
   const args = ["ls-files", "-z", "--", ...include, ...excludes];
   // TODO: report git's error clearly (not a repo, invalid pathspec).
   const stdout = execFileSync("git", args, {
