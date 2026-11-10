@@ -1,0 +1,13 @@
+name: SPDX check
+description: Check that source files declare SPDX-License-Identifier Apache-2.0 in their first 10 lines.
+inputs:
+  include:
+    description: Git pathspec patterns of files to check, separated by whitespace or newlines.
+    required: true
+  exclude:
+    description: Git pathspec patterns of files to skip, separated by whitespace or newlines.
+    required: false
+    default: ""
+runs:
+  using: node24
+  main: index.mjs
