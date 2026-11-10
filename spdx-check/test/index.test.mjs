@@ -52,8 +52,9 @@ function run(cwd, vars) {
     env: childEnv(vars),
     encoding: 'utf8',
   });
-  const errors = result.stdout.split(/\r?\n/).filter((l) => l.startsWith('::error'));
-  return { status: result.status, errors, stderr: result.stderr };
+  const lines = result.stdout.split(/\r?\n/);
+  const errors = lines.filter((l) => l.startsWith('::error'));
+  return { status: result.status, lines, errors, stderr: result.stderr };
 }
 
 function annotation(path) {
@@ -114,6 +115,20 @@ test('exclude patterns are honoured', () => {
   });
   assert.deepEqual(errors, []);
   assert.equal(status, 0, stderr);
+});
+
+test('annotation file property is escaped', () => {
+  const cwd = makeRepo({ 'a,b%.py': 'x\n' });
+  const { errors } = run(cwd, { INPUT_INCLUDE: '*.py' });
+  assert.deepEqual(errors, [annotation('a%2Cb%25.py')]);
+});
+
+// Windows forbids newlines and colons in filenames.
+test('a filename cannot inject a workflow command', { skip: process.platform === 'win32' }, () => {
+  const cwd = makeRepo({ 'x\n::add-mask::DUMMY\n.py': 'x\n' });
+  const { lines, errors } = run(cwd, { INPUT_INCLUDE: '*.py' });
+  assert.deepEqual(errors, [annotation('x%0A%3A%3Aadd-mask%3A%3ADUMMY%0A.py')]);
+  assert.ok(!lines.some((l) => l.startsWith('::add-mask')), lines.join('\n'));
 });
 
 test('step summary is appended with failing paths', () => {
