@@ -1,38 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { makeRepo, tempDir } from './repo.mjs';
 
 const INDEX = fileURLToPath(new URL('../index.mjs', import.meta.url));
 const HEADER = '# SPDX-License-Identifier: Apache-2.0\n';
-
-const tempDirs = [];
-after(() => {
-  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
-});
-
-function tempDir() {
-  const dir = mkdtempSync(join(tmpdir(), 'spdx-index-'));
-  tempDirs.push(dir);
-  return dir;
-}
-
-function makeRepo(files) {
-  const root = tempDir();
-  execFileSync('git', ['init', '-q'], { cwd: root });
-  for (const [path, content] of Object.entries(files)) {
-    const full = join(root, ...path.split('/'));
-    mkdirSync(dirname(full), { recursive: true });
-    writeFileSync(full, content);
-  }
-  execFileSync('git', ['add', '-A'], { cwd: root });
-  return root;
-}
 
 // Under GitHub Actions the parent env carries the real job's INPUT_* and
 // GITHUB_* (step summary, outputs); the child must never see them.
