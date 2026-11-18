@@ -17,6 +17,16 @@ jobs:
           node-version: 24
       - run: node --test "spdx-check/test/*.test.mjs"
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npx prettier@3.10.1 --check .
+      - run: for f in quay-login/*.mjs; do node --check "$f"; done
+
   dogfood:
     runs-on: ubuntu-latest
     steps:
