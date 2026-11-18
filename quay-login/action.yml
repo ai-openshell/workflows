@@ -1,0 +1,17 @@
+name: Quay login
+description: Log docker, podman or helm in to quay.io as a robot account, using the job's GitHub OIDC token instead of a stored secret.
+inputs:
+  robot:
+    description: Quay robot account to log in as, written namespace+name.
+    required: true
+  clients:
+    description: Clients to log in (docker, podman, helm), separated by whitespace or newlines.
+    required: false
+    default: docker
+  audience:
+    description: Audience of the GitHub OIDC token. It must be one the robot's federation trusts.
+    required: false
+    default: quay
+runs:
+  using: node24
+  main: index.mjs
