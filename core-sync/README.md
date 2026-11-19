@@ -87,8 +87,8 @@ jobs:
     uses: ai-openshell/workflows/.github/workflows/core-watch.yml@<sha>
     with:
       tag: ${{ inputs.tag }}
-    secrets: inherit
 ```
 
-The workflow and the scripts are pinned separately, so update both refs
-together.
+The caller passes no secrets: the called jobs declare the `sdk-bot`
+environment and read the App secrets from it. The workflow and the scripts
+are pinned separately, so update both refs together.
