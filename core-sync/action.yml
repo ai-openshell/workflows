@@ -1,0 +1,7 @@
+name: core-sync
+description: Set CORE_SYNC_DIR to the core-sync scripts of the commit this action runs from, for an SDK's core-sync mise tasks.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: echo "CORE_SYNC_DIR=$GITHUB_ACTION_PATH" >>"$GITHUB_ENV"

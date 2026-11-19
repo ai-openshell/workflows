@@ -34,3 +34,9 @@ jobs:
       - uses: ./spdx-check
         with:
           include: "*.mjs"
+
+  core-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: shellcheck -x -S warning core-sync/*.sh
