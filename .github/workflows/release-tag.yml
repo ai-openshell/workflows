@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Reusable: the first job of an SDK's lockstep release. When the core pin on
+# main moved to a stable tag vX.Y.Z, tags vX.Y.Z and creates a draft GitHub
+# release (core-sync/tag-release.sh), and outputs the tag; the caller's own
+# jobs then build, publish, and publish the release. Outputs an empty tag when
+# there is nothing to release. The caller job grants contents: write and
+# pull-requests: read.
+name: release-tag
+
+on:
+  workflow_call:
+    inputs:
+      sha:
+        description: Commit on main to release, for workflow_dispatch (default the tip); the pin there must be stable
+        type: string
+        required: false
+        default: ""
+    outputs:
+      tag:
+        description: The tag to release, or empty
+        value: ${{ jobs.tag.outputs.tag }}
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    name: tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the tag and the draft release
+      pull-requests: read # read the merged PR's body for the release notes
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: $/core-sync
+
+      - id: tag
+        name: Tag the release and create a draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          INPUT_SHA: ${{ inputs.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = workflow_dispatch ]; then
+            sha=${INPUT_SHA:-$GITHUB_SHA}
+            git merge-base --is-ancestor "$sha" "$GITHUB_SHA" || {
+              echo "::error::$sha is not on main"
+              exit 1
+            }
+            "$CORE_SYNC_DIR/tag-release.sh" --force --sha "$sha" >>"$GITHUB_OUTPUT"
+          else
+            # Compare against the commit before the push, so a pin change
+            # that isn't the pushed tip still counts.
+            "$CORE_SYNC_DIR/tag-release.sh" --since "$BEFORE" >>"$GITHUB_OUTPUT"
+          fi

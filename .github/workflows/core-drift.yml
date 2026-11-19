@@ -42,6 +42,10 @@ jobs:
         run: |
           if [ -f mise.lock ]; then mise install --locked; else mise install; fi
 
+      # The core-sync scripts of the commit this workflow runs from; the
+      # SDK's scripts/core-sync.sh runs them from CORE_SYNC_DIR.
+      - uses: $/core-sync
+
       # Exit 1 with a report means drift; the issue records it. No report
       # means the check itself broke, which the failure step records.
       - name: Check drift against core main

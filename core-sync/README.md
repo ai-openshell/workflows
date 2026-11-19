@@ -8,9 +8,17 @@ stable pin lands on `main`.
 
 The language-independent part lives here: the scripts in this directory and
 the reusable workflows
-[`core-watch.yml`](../.github/workflows/core-watch.yml) and
-[`core-drift.yml`](../.github/workflows/core-drift.yml). The SDK repository
+[`core-watch.yml`](../.github/workflows/core-watch.yml),
+[`core-drift.yml`](../.github/workflows/core-drift.yml), and
+[`release-tag.yml`](../.github/workflows/release-tag.yml). The SDK repository
 provides the language-specific part as mise tasks.
+
+The SDK pins one commit of this repository, in the `uses:` lines of its
+workflows. The reusable workflows run the scripts of that same commit: they
+load this directory as an action with `uses: $/core-sync`, which resolves to
+the workflow's own repository at the commit being run, and the action sets
+`CORE_SYNC_DIR`. Locally, the SDK's copy of `core-sync.sh` reads the commit
+from `.github/workflows/core-drift.yml` and downloads that commit's scripts.
 
 ## Scripts
 
@@ -23,7 +31,7 @@ provides the language-specific part as mise tasks.
 | `report-failure.sh`     | `core:report-failure` | Records a failed automation run in the drift issue.                                                                                                 |
 | `tag-release.sh`        | `release:tag`         | Tags `vX.Y.Z` and drafts the GitHub release when a stable pin lands on `main`. The repository's own `release.yml` builds and publishes the package. |
 
-Each script documents its arguments in its header. All of them run from the
+`core-sync.sh` is the SDK-side entry point that finds the scripts, and `action.yml` sets `CORE_SYNC_DIR` in the reusable workflows. Each script documents its arguments in its header. All of them run from the
 root of the SDK clone and use `gh`, `git`, and `mise`.
 
 ## Contract
@@ -54,41 +62,42 @@ The repository also needs:
 
 ## Using it
 
-Point the core-sync tasks at the scripts with mise
-[remote tasks](https://mise.jdx.dev/tasks/toml-tasks.html#remote-tasks),
-pinned to a commit of this repository:
+Copy [`core-sync.sh`](core-sync.sh) to `scripts/core-sync.sh` and point the
+tasks at it:
 
 ```toml
 [tasks."core:tags"]
 description = "List core release tags newer than the pin"
-file = "git::https://github.com/ai-openshell/workflows.git//core-sync/core-tags.sh?ref=<sha>"
+run = "scripts/core-sync.sh core-tags.sh"
 ```
 
-and call the reusable workflows at the same commit:
+The same for `core:bump` (`open-bump-pr.sh`), `core:drift`
+(`drift-check.sh`), `core:drift-issue` (`update-drift-issue.sh`),
+`core:report-failure` (`report-failure.sh`), and `release:tag`
+(`tag-release.sh`, for running it locally).
+
+Call the reusable workflows, all at the same commit:
 
 ```yaml
-name: core-watch
+name: core-drift
 
 on:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "41 4 * * *"
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Core tag to propose; empty proposes every new tag
-        required: false
-        default: ""
 
 permissions:
   contents: read
 
 jobs:
-  watch:
-    uses: ai-openshell/workflows/.github/workflows/core-watch.yml@<sha>
-    with:
-      tag: ${{ inputs.tag }}
+  drift:
+    uses: ai-openshell/workflows/.github/workflows/core-drift.yml@<sha>
 ```
 
+`core-watch.yml` takes an optional `tag` input. In the release workflow, the
+tag job is a call to `release-tag.yml` that grants `contents: write` and
+`pull-requests: read` and passes `sha` on `workflow_dispatch`; its `tag`
+output gates the build and publish jobs.
+
 The caller passes no secrets: the called jobs declare the `sdk-bot`
-environment and read the App secrets from it. The workflow and the scripts
-are pinned separately, so update both refs together.
+environment and read the App secrets from it.

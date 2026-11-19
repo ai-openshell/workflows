@@ -11,5 +11,5 @@ Reusable GitHub Actions workflows for the ai-openshell organization.
 
 ## Workflows
 
-- [`core-watch.yml`, `core-drift.yml`](core-sync/): keep an SDK repository in
+- [`core-watch.yml`, `core-drift.yml`, `release-tag.yml`](core-sync/): keep an SDK repository in
   step with OpenShell core, with the core-sync scripts behind mise tasks.
