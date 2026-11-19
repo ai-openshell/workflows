@@ -20,7 +20,8 @@
 # run rebuilds it and replaces the branch (force-with-lease) so the PR gets
 # opened. When the core tag no longer exists, closes an open proposal for it.
 # The current pin must be a release tag; a commit SHA pin stops the run.
-# Git identity and GH_TOKEN come from the environment (the App in CI).
+# Git identity and GH_TOKEN come from the environment (the App in CI); the
+# regeneration step runs without GH_TOKEN.
 set -euo pipefail
 
 core_repo=${CORE_REPO:-NVIDIA/OpenShell}
@@ -122,7 +123,9 @@ git worktree add --quiet -b "$branch" "$work/wt" "$base"
   sed -i.bak "s/^OPENSHELL_CORE_REF = \".*\"$/OPENSHELL_CORE_REF = \"$tag\"/" mise.toml && rm -f mise.toml.bak
   [ "$(pin_of <mise.toml)" = "$tag" ] || { echo "ERROR: could not set OPENSHELL_CORE_REF in mise.toml" >&2; exit 1; }
   mise trust --quiet mise.toml
-  log=$(mise run --quiet proto:gen 2>&1) || { echo "$log" >&2; exit 1; }
+  # Regenerating installs the SDK's dependencies, whose install scripts run
+  # here. Keep the bot token from them; only gh and git push need it.
+  log=$(env -u GH_TOKEN -u GITHUB_TOKEN mise run --quiet proto:gen 2>&1) || { echo "$log" >&2; exit 1; }
 
   # Refresh the copies of core files; one not in the tag yet is left as is.
   : >"$work/fixtures.txt"

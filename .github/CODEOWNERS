@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# SDK repositories run the core-sync scripts and reusable workflows with their
+# bot App's secrets, so changes to them need an infra review.
+/core-sync/ @ai-openshell/infra
+/.github/ @ai-openshell/infra

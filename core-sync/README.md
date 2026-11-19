@@ -101,3 +101,22 @@ output gates the build and publish jobs.
 
 The caller passes no secrets: the called jobs declare the `sdk-bot`
 environment and read the App secrets from it.
+
+## Security
+
+The scripts and workflows here run in SDK repositories with their bot App's
+secrets, so:
+
+- Changes here need an infra review (`.github/CODEOWNERS`).
+- SDKs pin a full commit SHA of `main`. Run `scripts/core-sync.sh --check-pin`
+  in the SDK's CI: it fails when the workflows call the shared workflows at
+  different refs, or at a commit that isn't on this repository's `main`. A
+  commit that only exists in a fork is reachable through this repository's
+  name too, so a pin bump could otherwise point at one. The check runs from
+  the SDK's own copy of `core-sync.sh`, not from the pinned commit, and runs
+  again before a local download.
+- `core-watch` keeps the App token out of the checkout's git config and out
+  of the environment while `open-bump-pr.sh` regenerates the bindings, which
+  installs the SDK's dependencies and runs their install scripts. `git push`
+  gets the token from gh.
+- The workflows that hold the token use a fixed mise version.

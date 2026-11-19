@@ -36,6 +36,8 @@ jobs:
 
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
+          # A fixed mise, not the newest release, for jobs that hold the bot token.
+          version: 2026.11.6
           install: false
 
       - name: Install tools
