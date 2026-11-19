@@ -100,13 +100,14 @@ fi
 generated=no
 if [ -d proto ]; then generated=yes; fi
 
-# 1. buf breaking between the two exports. Without a buf.yaml the directories
-# are plain modules, so FILE rules compare file by file.
+# 1. buf breaking between the two exports, file by file (FILE rules). A v1
+# config applies to the input directory itself; a v2 one would make the
+# repository root the module.
 if [ "$generated" = no ]; then
   result=fail
   breaking_section="Not run: exporting core main's protos failed (see below)."
 elif breaking=$(mise run --quiet proto:buf -- breaking proto --against "$work/pinned" \
-  --config '{"version":"v2","breaking":{"use":["FILE"]}}' 2>&1); then
+  --config '{"version":"v1","breaking":{"use":["FILE"]}}' 2>&1); then
   breaking_section="No breaking changes in $(echo $files | sed 's/ /, /g') between \`$pin\` and main."
 else
   result=fail
